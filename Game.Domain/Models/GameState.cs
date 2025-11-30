@@ -19,9 +19,21 @@ namespace Game.Domain.Models
 
     public enum GameStatus
     {
-        Placement,   // players are placing their 12 pieces each
-        InProgress,  // game running
-        Finished     // someone won
+        Placement,
+        InProgress,
+        Finished
+    }
+
+    public readonly struct Position
+    {
+        public int Row { get; }
+        public int Col { get; }
+
+        public Position(int row, int col)
+        {
+            Row = row;
+            Col = col;
+        }
     }
 
     public sealed class Piece
@@ -48,22 +60,10 @@ namespace Game.Domain.Models
         public bool IsDead => Lives <= 0;
     }
 
-
-    public readonly struct Position
-    {
-        public int Row { get; }
-        public int Col { get; }
-
-        public Position(int row, int col)
-        {
-            Row = row;
-            Col = col;
-        }
-    }
-
     public class Board
     {
         public const int Size = 7;
+
         private readonly Piece[,] _cells = new Piece[Size, Size];
 
         public bool IsInside(int row, int col) =>
@@ -77,14 +77,31 @@ namespace Game.Domain.Models
     public class GameState
     {
         public Guid Id { get; set; } = Guid.NewGuid();
+
         public Board Board { get; set; } = new Board();
 
         public Player CurrentPlayer { get; set; } = Player.Player1;
+
         public GameStatus Status { get; set; } = GameStatus.Placement;
+
         public Player? Winner { get; set; }
 
-        // fixed flag positions
-        public Position Player1Flag { get; } = new Position(Board.Size - 1, Board.Size / 2);
-        public Position Player2Flag { get; } = new Position(0, Board.Size / 2);
+        // home positions of each players own flag
+        public Position Player1FlagHome { get; } = new Position(Board.Size - 1, Board.Size / 2);
+        public Position Player2FlagHome { get; } = new Position(0, Board.Size / 2);
+
+        // current positions of flags when they are on the board
+        public Position Player1FlagPos { get; set; }
+        public Position Player2FlagPos { get; set; }
+
+        // whether the flag is currently on a board tile (not being carried)
+        public bool IsPlayer1FlagOnBoard { get; set; } = true;
+        public bool IsPlayer2FlagOnBoard { get; set; } = true;
+
+        public GameState()
+        {
+            Player1FlagPos = Player1FlagHome;
+            Player2FlagPos = Player2FlagHome;
+        }
     }
 }

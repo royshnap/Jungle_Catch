@@ -22,6 +22,142 @@ namespace Game.Domain
                 (attacker == PieceType.Mouse && defender == PieceType.Elephant);
         }
 
+        private static bool IsPlacementRow(Player player, int row)
+        {
+            // rows 0 and 1 are Player2 side
+            // rows 5 and 6 are Player1 side
+
+            return player switch
+            {
+                Player.Player1 => row >= Board.Size - 2, // 5 or 6
+                Player.Player2 => row <= 1,              // 0 or 1
+                _ => false
+            };
+        }
+
+        private static bool HasReachedTypeLimit(GameState state, Player player, PieceType type)
+        {
+            return player switch
+            {
+                Player.Player1 => type switch
+                {
+                    PieceType.Elephant => state.Player1ElephantsPlaced >= 4,
+                    PieceType.Tiger => state.Player1TigersPlaced >= 4,
+                    PieceType.Mouse => state.Player1MicePlaced >= 4,
+                    _ => true
+                },
+                Player.Player2 => type switch
+                {
+                    PieceType.Elephant => state.Player2ElephantsPlaced >= 4,
+                    PieceType.Tiger => state.Player2TigersPlaced >= 4,
+                    PieceType.Mouse => state.Player2MicePlaced >= 4,
+                    _ => true
+                },
+                _ => true
+            };
+        }
+
+        private static void IncrementTypeCounter(GameState state, Player player, PieceType type)
+        {
+            if (player == Player.Player1)
+            {
+                switch (type)
+                {
+                    case PieceType.Elephant:
+                        state.Player1ElephantsPlaced++;
+                        break;
+                    case PieceType.Tiger:
+                        state.Player1TigersPlaced++;
+                        break;
+                    case PieceType.Mouse:
+                        state.Player1MicePlaced++;
+                        break;
+                }
+            }
+            else if (player == Player.Player2)
+            {
+                switch (type)
+                {
+                    case PieceType.Elephant:
+                        state.Player2ElephantsPlaced++;
+                        break;
+                    case PieceType.Tiger:
+                        state.Player2TigersPlaced++;
+                        break;
+                    case PieceType.Mouse:
+                        state.Player2MicePlaced++;
+                        break;
+                }
+            }
+        }
+        public static bool TryPlacePiece(GameState state, Position pos, PieceType type, out string error)
+        {
+            error = string.Empty;
+
+            if (state.Status != GameStatus.Placement)
+            {
+                error = "Game is not in placement phase";
+                return false;
+            }
+
+            var player = state.CurrentPlayer;
+
+            if (player == Player.None)
+            {
+                error = "No current player";
+                return false;
+            }
+
+            if (type == PieceType.None)
+            {
+                error = "Invalid piece type";
+                return false;
+            }
+
+            if (!state.Board.IsInside(pos.Row, pos.Col))
+            {
+                error = "Position is outside the board";
+                return false;
+            }
+
+            if (!IsPlacementRow(player, pos.Row))
+            {
+                error = "You can place pieces only on your first two rows";
+                return false;
+            }
+
+            if (state.Board.GetPiece(pos.Row, pos.Col) != null)
+            {
+                error = "There is already a piece on that square";
+                return false;
+            }
+
+            if (HasReachedTypeLimit(state, player, type))
+            {
+                error = "You have already placed all pieces of this type";
+                return false;
+            }
+
+            // place the piece
+            var newPiece = new Piece(player, type);
+            state.Board.SetPiece(pos.Row, pos.Col, newPiece);
+            IncrementTypeCounter(state, player, type);
+
+            // check if this player finished placing all 12 pieces
+            if (state.Player1PlacementDone && state.Player2PlacementDone)
+            {
+                state.Status = GameStatus.InProgress;
+                state.CurrentPlayer = Player.Player1; // Player1 starts
+            }
+            else
+            {
+                // switch turn to the other player
+                state.CurrentPlayer = player == Player.Player1 ? Player.Player2 : Player.Player1;
+            }
+
+            return true;
+        }
+
         /*public static bool IsOnOwnSide(Player player, Position pos)
         {
             if (player == Player.Player1)

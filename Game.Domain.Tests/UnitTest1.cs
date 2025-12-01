@@ -185,6 +185,149 @@ namespace Game.Domain.Tests
             Assert.Equal(PieceType.Tiger, pieceAtGoal.Type);
         }
 
+        [Fact]
+        public void TryPlacePiece_Fails_WhenNotOnFirstTwoRows()
+        {
+            var state = new GameState
+            {
+                Status = GameStatus.Placement,
+                CurrentPlayer = Player.Player1
+            };
+
+            // row 3 is NOT in Player1 first two rows (which are rows 5 and 6)
+            var pos = new Position(3, 3);
+
+            var ok = GameLogic.TryPlacePiece(state, pos, PieceType.Elephant, out var error);
+
+            Assert.False(ok);
+            Assert.Equal("You can place pieces only on your first two rows", error);
+
+            // Board must still be empty at that position
+            Assert.Null(state.Board.GetPiece(pos.Row, pos.Col));
+        }
+
+        [Fact]
+        public void TryPlacePiece_Fails_WhenSquareIsOccupied()
+        {
+            var state = new GameState
+            {
+                Status = GameStatus.Placement,
+                CurrentPlayer = Player.Player1
+            };
+
+            var pos = new Position(Board.Size - 1, 0); // row 6, col 0 valid for Player1
+
+            // First placement should succeed
+            var ok1 = GameLogic.TryPlacePiece(state, pos, PieceType.Elephant, out var error1);
+            Assert.True(ok1, error1);
+            Assert.NotNull(state.Board.GetPiece(pos.Row, pos.Col));
+
+            // Now try to place another piece on the same square for Player1
+            state.CurrentPlayer = Player.Player1; // switch back manually for the test
+            var ok2 = GameLogic.TryPlacePiece(state, pos, PieceType.Tiger, out var error2);
+
+            Assert.False(ok2);
+            Assert.Equal("There is already a piece on that square", error2);
+
+            // The original piece should still be there
+            var piece = state.Board.GetPiece(pos.Row, pos.Col);
+            Assert.NotNull(piece);
+            Assert.Equal(PieceType.Elephant, piece.Type);
+            Assert.Equal(Player.Player1, piece.Owner);
+        }
+
+        [Fact]
+        public void TryPlacePiece_Fails_WhenPlacingMoreThanFourOfSameType()
+        {
+            var state = new GameState
+            {
+                Status = GameStatus.Placement,
+                CurrentPlayer = Player.Player1
+            };
+
+            // Place 4 Elephants for Player1, all should succeed
+            for (int i = 0; i < 4; i++)
+            {
+                state.CurrentPlayer = Player.Player1;
+                var pos = new Position(Board.Size - 1, i); // row 6, cols 0..3
+                var ok = GameLogic.TryPlacePiece(state, pos, PieceType.Elephant, out var error);
+                Assert.True(ok, error);
+            }
+
+            // 5th Elephant should fail
+            state.CurrentPlayer = Player.Player1;
+            var fifthPos = new Position(Board.Size - 1, 4); // still valid row
+
+            var ok5 = GameLogic.TryPlacePiece(state, fifthPos, PieceType.Elephant, out var error5);
+
+            Assert.False(ok5);
+            Assert.Equal("You have already placed all pieces of this type", error5);
+
+            // Ensure no piece was placed on the fifth position
+            Assert.Null(state.Board.GetPiece(fifthPos.Row, fifthPos.Col));
+        }
+        [Fact]
+        public void GameStatusBecomesInProgress_WhenBothPlayersFinishedPlacement()
+        {
+            var state = new GameState
+            {
+                Status = GameStatus.Placement,
+                CurrentPlayer = Player.Player1
+            };
+
+            // Pretend Player2 has already placed all pieces
+            state.Player2ElephantsPlaced = 4;
+            state.Player2TigersPlaced = 4;
+            state.Player2MicePlaced = 4;
+
+            // Prepare 12 valid positions for Player1 on their first two rows (rows 5 and 6)
+            var spots = new System.Collections.Generic.List<Position>();
+
+            for (int r = Board.Size - 1; r >= Board.Size - 2; r--) // rows 6 and 5
+            {
+                for (int c = 0; c < Board.Size; c++)              // cols 0..6
+                {
+                    spots.Add(new Position(r, c));
+                }
+            }
+
+            // spots now has 14 positions, we will use the first 12
+            int spotIndex = 0;
+
+            void PlaceForPlayer1(PieceType type)
+            {
+                state.CurrentPlayer = Player.Player1;
+                var pos = spots[spotIndex++];
+                var ok = GameLogic.TryPlacePiece(state, pos, type, out var error);
+                Assert.True(ok, error);
+            }
+
+            // 4 Elephants
+            for (int i = 0; i < 4; i++)
+            {
+                PlaceForPlayer1(PieceType.Elephant);
+            }
+
+            // 4 Tigers
+            for (int i = 0; i < 4; i++)
+            {
+                PlaceForPlayer1(PieceType.Tiger);
+            }
+
+            // 4 Mice
+            for (int i = 0; i < 4; i++)
+            {
+                PlaceForPlayer1(PieceType.Mouse);
+            }
+
+            // After last placement, both players should be "placement done"
+            Assert.True(state.Player1PlacementDone);
+            Assert.True(state.Player2PlacementDone);
+
+            // And the game should transition to InProgress with Player1 to move
+            Assert.Equal(GameStatus.InProgress, state.Status);
+            Assert.Equal(Player.Player1, state.CurrentPlayer);
+        }
 
     }
 }

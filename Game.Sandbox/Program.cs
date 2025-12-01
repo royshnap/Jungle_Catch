@@ -8,36 +8,25 @@ class Program
     {
         var state = new GameState
         {
-            Status = GameStatus.InProgress,
+            Status = GameStatus.Placement,
             CurrentPlayer = Player.Player1
         };
 
-        // Player1 Mouse at (2,2)
-        var mouse = new Piece(Player.Player1, PieceType.Mouse);
-        state.Board.SetPiece(2, 2, mouse);
+        // Player1 places an Elephant at bottom row
+        var pos1 = new Position(Board.Size - 1, 0); // row 6, col 0
+        var ok1 = GameLogic.TryPlacePiece(state, pos1, PieceType.Elephant, out var err1);
 
-        // Player2 Elephant at (2,3)
-        var elephant = new Piece(Player.Player2, PieceType.Elephant);
-        state.Board.SetPiece(2, 3, elephant);
+        Console.WriteLine($"P1 place Elephant ok: {ok1}, error: {err1}");
+        Console.WriteLine($"Current player is now: {state.CurrentPlayer}");
 
-        Console.WriteLine("Before move:");
-        PrintBoard(state);
+        // Player2 places a Tiger at top row
+        var pos2 = new Position(0, 0); // row 0, col 0
+        var ok2 = GameLogic.TryPlacePiece(state, pos2, PieceType.Tiger, out var err2);
 
-        var from = new Position(2, 2);
-        var to = new Position(2, 3);
-
-        var ok = GameLogic.TryMove(state, from, to, out var error);
+        Console.WriteLine($"P2 place Tiger ok: {ok2}, error: {err2}");
+        Console.WriteLine($"Current player is now: {state.CurrentPlayer}");
 
         Console.WriteLine();
-        Console.WriteLine($"Move ok: {ok}");
-        Console.WriteLine($"Error: {error}");
-        Console.WriteLine($"Mouse lives: {mouse.Lives}");
-        Console.WriteLine($"Elephant lives: {elephant.Lives}");
-        Console.WriteLine($"Current player: {state.CurrentPlayer}");
-        Console.WriteLine($"Status: {state.Status}, Winner: {state.Winner}");
-
-        Console.WriteLine();
-        Console.WriteLine("After move:");
         PrintBoard(state);
     }
 

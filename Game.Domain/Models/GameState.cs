@@ -86,6 +86,25 @@ namespace Game.Domain.Models
 
         public Player? Winner { get; set; }
 
+        // placement counters
+        public int Player1ElephantsPlaced { get; set; }
+        public int Player1TigersPlaced { get; set; }
+        public int Player1MicePlaced { get; set; }
+
+        public int Player2ElephantsPlaced { get; set; }
+        public int Player2TigersPlaced { get; set; }
+        public int Player2MicePlaced { get; set; }
+
+        public bool Player1PlacementDone =>
+            Player1ElephantsPlaced >= 4 &&
+            Player1TigersPlaced >= 4 &&
+            Player1MicePlaced >= 4;
+
+        public bool Player2PlacementDone =>
+            Player2ElephantsPlaced >= 4 &&
+            Player2TigersPlaced >= 4 &&
+            Player2MicePlaced >= 4;
+
         // home positions of each players own flag
         public Position Player1FlagHome { get; } = new Position(Board.Size - 1, Board.Size / 2);
         public Position Player2FlagHome { get; } = new Position(0, Board.Size / 2);
@@ -104,4 +123,5 @@ namespace Game.Domain.Models
             Player2FlagPos = Player2FlagHome;
         }
     }
+
 }

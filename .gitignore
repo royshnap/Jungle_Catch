@@ -3,3 +3,5 @@ obj/
 .vs/
 *.user
 *.log
+
+Game.Client/node_modules/
